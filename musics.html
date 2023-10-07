@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой Аудиоплеер</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        #audioPlayerContainer {
+            max-width: 400px;
+            margin: 0 auto;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #audioPlayer {
+            width: 100%;
+        }
+
+        #audioPlayerControls {
+            margin-top: 20px;
+        }
+
+        .audio-control-button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 20px;
+            margin: 5px;
+        }
+
+        .audio-control-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Добавьте следующий CSS внутри вашего стиля */
+
+        .audio-item {
+            white-space: nowrap; /* Запрещает перенос текста на новую строку */
+            overflow: hidden; /* Скрывает текст, который не помещается в блоке */
+            text-overflow: ellipsis; /* Добавляет многоточие (...) в конце текста, который не помещается */
+            font-size: 14px; /* Уменьшает размер шрифта для названий песен */
+            line-height: 1.2; /* Задает высоту строки для улучшения читаемости */
+            cursor: pointer; /* Добавляем курсор-указатель для элементов, которые можно редактировать */
+        }
+
+        #audios {
+            column-count: 2;
+            column-gap: 15px;
+        }
+
+        .audio-item {
+            break-inside: avoid;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .audio-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Добавляем стили для иконки редактирования */
+        .edit-icon {
+            font-size: 14px;
+            color: #007bff;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+
+        /* Media Queries для адаптивности */
+        @media (max-width: 768px) {
+            #audioPlayerContainer {
+                max-width: 90%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #audioPlayerContainer {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Мой Аудиоплеер</h1>
+</header>
+<div id="audioPlayerContainer">
+    <audio id="audioPlayer" controls autoplay></audio>
+    <div id="audioPlayerControls">
+        <button class="audio-control-button" id="previousButton" title="Previous Track">
+            <i class="fas fa-backward"></i>
+        </button>
+        <button class="audio-control-button" id="playButton" title="Play">
+            <i class="fas fa-play"></i>
+        </button>
+        <button class="audio-control-button" id="nextButton" title="Next Track">
+            <i class="fas fa-forward"></i>
+        </button>
+    </div>
+</div>
+<div id="audios"></div>
+
+<script>
+        window.onload = function () {
+            const audiosDiv = document.getElementById('audios');
+            const audioPlayer = document.getElementById('audioPlayer');
+            const playButton = document.createElement('button');
+            playButton.innerHTML = '<i class="fas fa-play"></i> Play';
+            audiosDiv.appendChild(playButton);
+
+            const audioList = [];
+            let currentAudioIndex = 0;
+            let isEditing = false; // Добавляем флаг для отслеживания редактирования
+
+            fetch('/list/musics')
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error('Server error');
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    audioList.push(...data);
+
+                    audioList.forEach((audio, index) => {
+                        const audioItemContainer = document.createElement('div');
+                        audioItemContainer.classList.add('audio-item-container');
+
+                        const filenameElem = document.createElement('p');
+                        filenameElem.textContent = audio;
+                        filenameElem.classList.add('audio-item');
+                        audioItemContainer.appendChild(filenameElem);
+
+                        const editIcon = document.createElement('i');
+                        editIcon.classList.add('fas', 'fa-edit', 'edit-icon');
+                        audioItemContainer.appendChild(editIcon);
+
+                        audiosDiv.appendChild(audioItemContainer);
+
+                        filenameElem.addEventListener('click', () => {
+                            if (!isEditing) { // Проверяем, не редактируется ли уже название
+                                currentAudioIndex = index;
+                                playAudio(audioList[currentAudioIndex]);
+                            }
+                        });
+
+                        editIcon.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (!isEditing) { // Проверяем, не редактируется ли уже название
+                                isEditing = true; // Устанавливаем флаг редактирования
+                                filenameElem.contentEditable = 'true';
+                                filenameElem.focus();
+                                filenameElem.addEventListener('keydown', (event) => {
+                                    if (event.key === 'Enter') {
+                                        event.preventDefault();
+                                        filenameElem.contentEditable = 'false';
+                                        isEditing = false; // Сбрасываем флаг редактирования
+                                        audioList[index] = sanitizeFilename(filenameElem.textContent);
+                                        playAudio(audioList[currentAudioIndex]);
+                                    }
+                                });
+                            }
+                        });
+                    });
+
+                    playAudio(audioList[currentAudioIndex]);
+                })
+                .catch(err => {
+                    console.error(err);
+                    const audiosDiv = document.getElementById('audios');
+                    audiosDiv.textContent = 'Произошла ошибка на сервере при получении списка аудиофайлов.';
+                });
+
+            function playAudio(audioFile) {
+                if (!isEditing) { // Проверяем, не редактируется ли название перед воспроизведением
+                    audioPlayer.src = `/uploads/musics/${audioFile}`;
+                    audioPlayer.play();
+                }
+            }
+
+
+
+        function nextTrack() {
+            if (currentAudioIndex < audioList.length - 1) {
+                currentAudioIndex++;
+                playAudio(audioList[currentAudioIndex]);
+            } else {
+                currentAudioIndex = 0;
+                playAudio(audioList[currentAudioIndex]);
+            }
+        }
+
+        function previousTrack() {
+            if (currentAudioIndex > 0) {
+                currentAudioIndex--;
+                playAudio(audioList[currentAudioIndex]);
+            } else {
+                currentAudioIndex = audioList.length - 1;
+                playAudio(audioList[currentAudioIndex]);
+            }
+        }
+
+        document.getElementById('previousButton').addEventListener('click', () => {
+            previousTrack();
+        });
+
+        document.getElementById('playButton').addEventListener('click', () => {
+            togglePlay();
+        });
+
+        document.getElementById('nextButton').addEventListener('click', () => {
+            nextTrack();
+        });
+
+        function togglePlay() {
+            if (audioPlayer.paused || audioPlayer.ended) {
+                playAudio(audioList[currentAudioIndex]);
+            } else {
+                audioPlayer.pause();
+            }
+        }
+
+        audioPlayer.addEventListener('ended', () => {
+            nextTrack();
+        });
+
+        document.addEventListener('keydown', event => {
+            if (event.keyCode === 32) {
+                event.preventDefault();
+                togglePlay();
+            } else if (event.keyCode === 37) {
+                event.preventDefault();
+                previousTrack();
+            } else if (event.keyCode === 39) {
+                event.preventDefault();
+                nextTrack();
+            }
+        });
+    };
+</script>
+</body>
+</html>

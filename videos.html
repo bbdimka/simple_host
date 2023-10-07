@@ -1,0 +1,52 @@
+<!-- Раздел для отображения видеофайлов -->
+<div id="videos"></div>
+
+<script>
+    window.onload = function () {
+    fetch('/list/videos') // Получить список видеофайлов
+        .then(res => {
+            if (!res.ok) {
+                throw new Error('Server error');
+            }
+            return res.json();
+        })
+        .then(data => {
+            const videosDiv = document.getElementById('videos');
+            data.forEach(video => {
+                const videoContainer = document.createElement('div'); // Создаем контейнер для видео и названия
+                const videoElem = document.createElement('video');
+                videoElem.src = `/uploads/videos/${video}`;
+                videoElem.controls = true;
+
+                const videoName = document.createElement('p'); // Создаем элемент для названия
+                videoName.textContent = video;
+
+                videoContainer.appendChild(videoName); // Добавляем название к контейнеру
+                videoContainer.appendChild(videoElem); // Добавляем видео к контейнеру
+
+                videosDiv.appendChild(videoContainer); // Добавляем контейнер к основному контейнеру видео
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            const videosDiv = document.getElementById('videos');
+            videosDiv.textContent = 'Произошла ошибка на сервере при получении списка видеофайлов.';
+        });
+};
+
+
+
+</script>
+
+<style>
+    /* CSS-стили для элементов <video> */
+    video {
+      max-width: 400px; /* Максимальная ширина изображения */
+      max-height: 350px; /* Максимальная высота изображения */
+      width: auto; /* Автоматическая ширина */
+      height: auto; /* Автоматическая высота */
+      margin-right: 10px; /* Отступ справа между изображениями */
+    }
+  </style>
+  
+

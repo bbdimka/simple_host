@@ -1,0 +1,39 @@
+<!-- Раздел для отображения изображений -->
+<div id="images"></div>
+
+<script>
+    window.onload = function () {
+        fetch('/list/images') // Получить список изображений
+            .then(res => res.json())
+            .then(data => {
+                const imagesDiv = document.getElementById('images');
+
+                data.forEach(image => {
+                    // Создать элемент изображения
+                    const imageElem = document.createElement('img');
+                    imageElem.src = `/uploads/images/${image}`;
+                    imageElem.alt = image; // Добавить альтернативный текст
+                    imagesDiv.appendChild(imageElem);
+                });
+            })
+            .catch(err => console.error(err));
+    };
+</script>
+
+
+  
+<div id="images"></div>
+
+<style>
+    /* CSS-стили для изображений */
+    img {
+      max-width: 400px; /* Максимальная ширина изображения */
+      max-height: 350px; /* Максимальная высота изображения */
+      width: auto; /* Автоматическая ширина */
+      height: auto; /* Автоматическая высота */
+      margin-right: 10px; /* Отступ справа между изображениями */
+    }
+  </style>
+  
+  
+  

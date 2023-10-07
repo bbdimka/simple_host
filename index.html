@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Uploader</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        #uploadForm {
+            max-width: 400px;
+            margin: 0 auto;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #uploadForm label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #mediaFiles {
+            display: block;
+            margin: 0 auto;
+            margin-bottom: 10px;
+        }
+
+        #uploadProgress {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #ccc;
+            margin-top: 20px;
+        }
+
+        .media-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .media-item {
+            flex: 0 1 calc(33.33% - 20px);
+            max-width: calc(33.33% - 20px);
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            background-color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .media-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .media-item img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .media-item audio {
+            width: 100%;
+        }
+
+        #directories {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #directories a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .progress-container {
+            max-width: 400px;
+            margin: 10px auto;
+            text-align: center;
+        }
+
+        .file-container {
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        .file-progress {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Media Uploader</h1>
+    </header>
+    <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+        <label for="mediaFiles">Выберите медиафайлы:</label>
+        <input type="file" id="mediaFiles" name="mediaFiles[]" accept="video/*, image/*, audio/*" multiple required>
+        <button type="submit">Загрузить</button>
+    </form>
+    <hr>
+    <div class="media-container" id="videos"></div>
+    <div class="media-container" id="images"></div>
+    <div class="media-container" id="audios"></div>
+    <div class="media-container" id="musics"></div>
+    <div id="directories">
+        <a href="/videos">Видео</a>
+        <a href="/images">Изображения</a>
+        <a href="/musics">Музыка</a>
+    </div>
+    <hr>
+    <div id="uploadProgress" class="progress-container"></div> <!-- Этот div будет использоваться для отображения прогресса загрузки -->
+
+    <script>
+        function displayMedia(type, filename) {
+            // Функция для отображения медиафайлов
+            const container = document.querySelector(`#${type}`);
+            if (type === 'musics') {
+                const audioElem = document.createElement('audio');
+                audioElem.src = `/uploads/musics/${filename}`;
+                audioElem.controls = true;
+                container.appendChild(audioElem);
+            } else if (type === 'images') {
+                const imageElem = document.createElement('img');
+                imageElem.src = `/uploads/images/${filename}`;
+                imageElem.alt = filename; // Добавьте альтернативный текст для изображения
+                container.appendChild(imageElem);
+            } else {
+                // Аналогично для других типов файлов (videos, audios)
+            }
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const files = document.getElementById('mediaFiles').files;
+            uploadMedia(files); // Передаем массив выбранных файлов вместо одного файла
+        });
+
+        function uploadMedia(files) {
+            const progressContainer = document.querySelector('#uploadProgress');
+
+            // Создаем массив объектов FormData для каждого файла
+            const formDataArray = Array.from(files).map((file, index) => {
+                const formData = new FormData();
+                formData.append('mediaFiles', file);
+
+                // Создаем прогресс-бар для каждого файла
+                const progress = document.createElement('div');
+                progress.className = 'progress-bar';
+                progress.style.width = '0%'; // Начальная ширина 0%
+                progress.textContent = '0%';
+
+                // Создаем поле ввода для названия файла
+                const fileNameInput = document.createElement('input');
+                fileNameInput.type = 'text';
+                fileNameInput.id = `fileName-${index}`;
+                fileNameInput.value = file.name; // Устанавливаем начальное значение как имя файла
+
+                // Создаем кнопку "Сохранить"
+                const saveButton = document.createElement('button');
+                saveButton.innerText = 'Сохранить';
+                saveButton.addEventListener('click', function () {
+                    const newFileName = fileNameInput.value;
+                    const oldFileName = file.name;
+                    updateFileName(oldFileName, newFileName);
+                });
+
+                // Создаем контейнер для прогресс-бара, поля ввода и кнопки "Сохранить"
+                const progressItemContainer = document.createElement('div');
+                progressItemContainer.className = 'file-container';
+                progressItemContainer.appendChild(fileNameInput);
+                progressItemContainer.appendChild(progress);
+                progressItemContainer.appendChild(saveButton);
+
+                // Добавляем контейнер в контейнер прогресса
+                progressContainer.appendChild(progressItemContainer);
+
+                return { formData, progress };
+            });
+
+            // Создаем массив объектов XMLHttpRequest для каждого файла
+            const xhrArray = formDataArray.map(({ formData, progress }, index) => {
+                const xhr = new XMLHttpRequest();
+
+                // Устанавливаем тайм-аут на 60 секунд
+                xhr.timeout = 60000;
+
+                xhr.open('POST', '/upload', true);
+
+                xhr.upload.onprogress = function (event) {
+                    if (event.lengthComputable) {
+                        const percentComplete = Math.round((event.loaded / event.total) * 100);
+                        progress.style.width = percentComplete + '%';
+                        progress.textContent = percentComplete + '%';
+                    }
+                };
+
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response && response.filename) {
+                            const ext = response.filename.split('.').pop();
+                            let mediaType;
+
+                            if (ext === 'mp4' || ext === 'avi') {
+                                mediaType = 'videos';
+                            } else if (ext === 'mp3') {
+                                mediaType = 'audios';
+                            } else {
+                                mediaType = 'images';
+                            }
+
+                            displayMedia(mediaType, response.filename);
+                        }
+                    }
+                };
+
+                // Обработчик для случая, если запрос превысил установленный тайм-аут
+                xhr.ontimeout = function () {
+                    console.error('Запрос превысил установленный тайм-аут');
+                    // Здесь вы можете выполнить дополнительные действия при превышении тайм-аута
+                };
+
+                xhr.send(formData);
+
+                return xhr;
+            });
+        }
+
+        function updateFileName(oldFileName, newFileName) {
+            // Создайте запрос на сервер для обновления имени файла
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/updateFileName', true);
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    console.log('Имя файла обновлено успешно.');
+                } else {
+                    console.error('Ошибка обновления имени файла.');
+                }
+            };
+
+            xhr.send(JSON.stringify({ oldFileName, newFileName }));
+        }
+    </script>
+</body>
+</html>
